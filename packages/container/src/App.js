@@ -8,3 +8,5 @@ export default () => {
         <MarketingApp />
         </div>
 };
+
+console.log('hi');
