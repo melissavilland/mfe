@@ -1,0 +1,35 @@
+name: deploy-auth # name of workflow
+
+on: #designate what events are we looking for to run the workflow
+  push: # push event
+    branches: # what branches change needs to happen to run workflow
+      - master 
+      - main
+    paths: # what paths are we looking for changes to happen to run workflow
+      - 'packages/auth/**'
+
+defaults: # sets the directory in which the below written commands should be executed
+  run:
+    working-directory: packages/auth
+
+jobs: # jobs to be run when workflow is triggered, jobs run in parallel
+  build: # build job, to build the project
+    runs-on: ubuntu-latest # job to run on virtual machine created by github
+
+    steps: # actual commands we wanna execute
+      - uses: actions/checkout@v2
+      - run: npm install
+      - run: npm run build
+
+      - uses: shinyinc/action-aws-cli@v1.2 # gives access to AWS CLI
+      - run: aws s3 sync dist s3://${{ secrets.AWS_S3_BUCKET_NAME }}/auth/latest
+        env: 
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
+
+      - run: aws cloudfront create-invalidation --distribution-id ${{ secrets.AWS_DISTRIBUTION_ID }} --paths "/auth/latest/remoteEntry.js"
+        env: 
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
